@@ -5,22 +5,12 @@ import IntroVideo from '@/components/IntroVideo';
 import MainContent from '@/components/MainContent';
 import { useIntroAnimation } from '@/hooks/useIntroAnimation';
 
-declare global {
-  interface Window {
-    // YT: any;
-    onYouTubeIframeAPIReady?: () => void;
-  }
-}
-
-let youtubeApiLoaded = false;
-let playerInitQueue: (() => void)[] = [];
-
 export default function Home() {
   const [introComplete, setIntroComplete] = useState(false);
-  const [userHasInteracted, setUserHasInteracted] = useState(false);
-  const playerRef = useRef<any>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const playerReadyRef = useRef(false);
+  const [videoPlaying, setVideoPlaying] = useState(false);
+  const [isUnmuted, setIsUnmuted] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hasUnmutedRef = useRef(false);
 
   const { introRef, contentRef, handleVideoEnd } = useIntroAnimation({
     onIntroComplete: () => {
@@ -28,124 +18,30 @@ export default function Home() {
     },
   });
 
-  // Load YouTube API once on mount
+  // Unmute video after intro completes (audio context is established)
   useEffect(() => {
-    if (youtubeApiLoaded) return;
-
-    const globalCallback = () => {
-      youtubeApiLoaded = true;
-      // Process any queued initializations
-      playerInitQueue.forEach(fn => fn());
-      playerInitQueue = [];
-    };
-
-    window.onYouTubeIframeAPIReady = globalCallback;
-
-    // Check if API is already loaded
-    if (window.YT && window.YT.Player) {
-      youtubeApiLoaded = true;
-    } else {
-      // Load the API script
-      const script = document.createElement('script');
-      script.src = 'https://www.youtube.com/iframe_api';
-      script.async = true;
-      script.onerror = () => {
-        console.error('Failed to load YouTube API');
-      };
-      document.head.appendChild(script);
-    }
-  }, []);
-
-  // Initialize player when intro completes
-  useEffect(() => {
-    if (introComplete && window.YT && window.YT.Player && containerRef.current && !playerRef.current) {
-      playerRef.current = new window.YT.Player(containerRef.current, {
-        width: '100%',
-        height: '100%',
-        videoId: 'P-jQdxD_D2U',
-        playerVars: {
-          autoplay: 1,
-          mute: 1, // Start MUTED for autoplay to work on refresh
-          controls: 0,
-          modestbranding: 1,
-          rel: 0,
-          loop: 1,
-          playlist: 'P-jQdxD_D2U',
-          fs: 0,
-          iv_load_policy: 3,
-          playsinline: 1,
-        },
-        events: {
-          onReady: (event: any) => {
-            playerReadyRef.current = true;
-            event.target.playVideo();
-            // Try to unmute if user has already interacted
-            if (userHasInteracted) {
-              try {
-                event.target.unMute();
-                event.target.setVolume(100);
-              } catch (e) {
-                console.log('Cannot unmute yet - waiting for user interaction');
-              }
-            }
-          },
-          onStateChange: (event: any) => {
-            if (event.data === window.YT.PlayerState.ENDED) {
-              event.target.playVideo();
-            }
-          },
-          onError: (event: any) => {
-            console.error('YouTube error:', event.data);
-          }
-        },
-      });
-    }
-  }, [introComplete, userHasInteracted]);
-
-  // Handle user interaction to unmute video
-  useEffect(() => {
-    const handleUserInteraction = () => {
-      if (!userHasInteracted) {
-        setUserHasInteracted(true);
-        // Unmute player if ready
-        if (playerRef.current && playerReadyRef.current) {
-          try {
-            playerRef.current.unMute();
-            playerRef.current.setVolume(100);
-          } catch (e) {
-            console.log('Error unmuting:', e);
-          }
+    if (introComplete && videoRef.current && !hasUnmutedRef.current) {
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.muted = false;
+          hasUnmutedRef.current = true;
+          setIsUnmuted(true);
+          console.log('✓ Video unmuted - audio context established');
         }
-        // Remove listener after first interaction
-        document.removeEventListener('click', handleUserInteraction);
-        document.removeEventListener('touchstart', handleUserInteraction);
-        document.removeEventListener('keydown', handleUserInteraction);
+      }, 200);
+    }
+  }, [introComplete]);
+
+  // Toggle play/pause on video click
+  const togglePlayPause = () => {
+    if (videoRef.current) {
+      if (videoRef.current.paused) {
+        videoRef.current.play().catch(e => console.log('Play error:', e));
+      } else {
+        videoRef.current.pause();
       }
-    };
-
-    document.addEventListener('click', handleUserInteraction);
-    document.addEventListener('touchstart', handleUserInteraction);
-    document.addEventListener('keydown', handleUserInteraction);
-
-    return () => {
-      document.removeEventListener('click', handleUserInteraction);
-      document.removeEventListener('touchstart', handleUserInteraction);
-      document.removeEventListener('keydown', handleUserInteraction);
-    };
-  }, [userHasInteracted]);
-
-  useEffect(() => {
-    return () => {
-      if (playerRef.current) {
-        try {
-          playerRef.current.destroy();
-        } catch (e) {
-          console.log('Error destroying player:', e);
-        }
-        playerRef.current = null;
-      }
-    };
-  }, []);
+    }
+  };
 
   return (
     <div className="w-screen h-screen overflow-hidden relative bg-black">
@@ -159,32 +55,62 @@ export default function Home() {
         />
       </div>
 
-      {/* YouTube Video - Fullscreen & Responsive */}
+      {/* Background Video - Fullscreen & Responsive */}
       {introComplete && (
-        <div className="fixed inset-0 w-screen h-screen z-40 overflow-hidden bg-black flex items-center justify-center">
-          <div className="relative w-full h-full">
-            <div ref={containerRef} className="w-full h-full" />
-            
-            {/* Volume Control Button */}
-            <button
-              onClick={() => {
-                if (playerRef.current) {
-                  if (playerRef.current.isMuted()) {
-                    playerRef.current.unMute();
-                    playerRef.current.setVolume(100);
-                  } else {
-                    playerRef.current.mute();
-                  }
-                }
-              }}
-              className="fixed bottom-8 right-8 z-50 bg-white/20 hover:bg-white/40 text-white p-3 rounded-full backdrop-blur-sm transition-all"
-              title="Toggle Volume"
-            >
+        <div className="fixed inset-0 w-screen h-screen z-40 overflow-hidden bg-black">
+          <video
+            ref={videoRef}
+            className="w-full h-full object-cover cursor-pointer"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            onClick={togglePlayPause}
+            onPlay={() => setVideoPlaying(true)}
+            onPause={() => setVideoPlaying(false)}
+            onError={(e) => {
+              console.error('Video error:', e);
+            }}
+          >
+            <source
+              src="https://media.career141.com/YTDown_YouTube_Voices-of-Talent-Acquisition-Speaker-Bri_Media_P-jQdxD_D2U_001_1080p.mp4"
+              type="video/mp4"
+            />
+            Your browser does not support the video tag.
+          </video>
+
+          {/* Play Button - Shows when paused */}
+          {!videoPlaying && (
+            <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/30 pointer-events-none">
+              <div className="w-20 h-20 bg-white/30 rounded-full flex items-center justify-center">
+                <svg className="w-10 h-10 text-white ml-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                </svg>
+              </div>
+            </div>
+          )}
+          
+          {/* Volume Control Button - Bottom Right */}
+          <button
+            onClick={() => {
+              if (videoRef.current) {
+                videoRef.current.muted = !videoRef.current.muted;
+              }
+            }}
+            className="fixed bottom-8 right-8 z-50 bg-white/20 hover:bg-white/40 text-white p-3 rounded-full backdrop-blur-sm transition-all"
+            title="Toggle Volume"
+          >
+            {videoRef.current?.muted ? (
               <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.172a1 1 0 011.414 0A6.972 6.972 0 0119 10a6.972 6.972 0 01-2.929 5.828 1 1 0 01-1.414-1.414A4.972 4.972 0 0017 10a4.972 4.972 0 00-2.343-4.172 1 1 0 010-1.414z" clipRule="evenodd" /><path fillRule="evenodd" d="M12.586 4.172a1 1 0 011.414 0A9.956 9.956 0 0121 10a9.956 9.956 0 01-6.828 9.172 1 1 0 11-.586-1.914A7.964 7.964 0 0019 10a7.964 7.964 0 00-5.414-7.414 1 1 0 010-1.414z" clipRule="evenodd" />
+                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17a2 2 0 002 2h2.828l8.38-8.379-2.83-2.828z" />
               </svg>
-            </button>
-          </div>
+            ) : (
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.172a1 1 0 011.414 0A6.972 6.972 0 0119 10a6.972 6.972 0 01-2.929 5.828 1 1 0 01-1.414-1.414A4.972 4.972 0 0017 10a4.972 4.972 0 00-2.343-4.172 1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            )}
+          </button>
         </div>
       )}
 
