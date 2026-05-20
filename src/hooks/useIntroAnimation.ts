@@ -20,6 +20,14 @@ export function useIntroAnimation({ onIntroComplete }: UseIntroAnimationProps) {
           introRef.current.style.pointerEvents = 'none';
           introRef.current.style.visibility = 'hidden';
         }
+        if (contentRef.current) {
+          contentRef.current.classList.remove('hidden');
+          gsap.to(contentRef.current, {
+            opacity: 1,
+            duration: 1,
+            ease: 'power2.out',
+          });
+        }
         onIntroComplete(wasMuted);
       },
     });

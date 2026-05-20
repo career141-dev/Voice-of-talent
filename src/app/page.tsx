@@ -23,21 +23,18 @@ export default function Home() {
 
   useEffect(() => {
     const videoElement = videoRef.current;
+    if (!videoElement || !introComplete) return;
+
+    videoElement.currentTime = 0;
+  }, [introComplete]);
+
+  useEffect(() => {
+    const videoElement = videoRef.current;
     if (!videoElement) return;
 
     videoElement.muted = !audioUnlocked;
     setIsUnmuted(!videoElement.muted);
   }, [audioUnlocked]);
-
-  useEffect(() => {
-    const videoElement = videoRef.current;
-    if (!videoElement || !introComplete) return;
-
-    videoElement.currentTime = 0;
-    videoElement.muted = !audioUnlocked;
-    setIsUnmuted(!videoElement.muted);
-    // Removed automatic play() call to wait for user to click play button
-  }, [audioUnlocked, introComplete]);
 
   const togglePlayPause = () => {
     if (videoRef.current) {
@@ -64,10 +61,10 @@ export default function Home() {
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black">
       {introComplete && (
-        <div className="fixed inset-0 z-40 h-screen w-screen overflow-hidden bg-black">
+        <div className="fixed inset-0 z-40 h-[100dvh] w-screen overflow-hidden bg-black flex items-center justify-center">
           <video
             ref={videoRef}
-            className="h-full w-full cursor-pointer object-cover"
+            className="h-full w-full cursor-pointer object-contain md:object-cover"
             muted={!audioUnlocked}
             loop
             playsInline
@@ -82,16 +79,25 @@ export default function Home() {
           />
 
           {( !videoPlaying || !audioUnlocked ) && (
-            <div 
-              onClick={() => {
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                console.log("Play button clicked");
                 if (videoRef.current) {
                   videoRef.current.muted = false;
                   setAudioUnlocked(true);
                   setIsUnmuted(true);
-                  videoRef.current.play().catch(e => console.error(e));
+                  // Force play on interaction
+                  videoRef.current.play().then(() => {
+                    console.log("Video playback started");
+                    setVideoPlaying(true);
+                  }).catch(e => {
+                    console.error("Play button error:", e);
+                  });
                 }
               }}
-              className="fixed inset-0 z-30 flex items-center justify-center bg-black/20 cursor-pointer group"
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 cursor-pointer group outline-none"
             >
               <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white/10 backdrop-blur-md border border-white/30 group-hover:scale-110 group-hover:bg-white/20 transition-all duration-300">
                 <svg 
@@ -105,7 +111,7 @@ export default function Home() {
               <p className="absolute bottom-[40%] text-white text-sm font-medium tracking-[0.3em] uppercase opacity-70 group-hover:opacity-100 transition-opacity">
                 {!audioUnlocked ? "Play" : "Resume"}
               </p>
-            </div>
+            </button>
           )}
 
           <button
@@ -131,7 +137,7 @@ export default function Home() {
       )}
 
       {!introComplete && (
-        <div ref={introRef} className="fixed inset-0 z-50 h-screen w-screen opacity-100">
+        <div ref={introRef} className="fixed inset-0 z-[60] h-screen w-screen opacity-100">
           <IntroVideo
             onVideoEnd={handleVideoEnd}
             onUserUnmute={() => {
@@ -141,7 +147,7 @@ export default function Home() {
         </div>
       )}
 
-      <div ref={contentRef} className="fixed inset-0 z-10 hidden h-screen w-screen">
+      <div ref={contentRef} className="fixed inset-0 z-50 pointer-events-none hidden h-screen w-screen opacity-0">
         <MainContent />
       </div>
     </div>
