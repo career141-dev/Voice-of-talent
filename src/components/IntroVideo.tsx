@@ -31,7 +31,7 @@ export default function IntroVideo({ onVideoEnd }: IntroVideoProps) {
         muted
         playsInline
         className="w-full h-full object-cover"
-        src="/videos/intro.mp4"
+        src="https://media.career141.com/WhatsApp%20Video%202026-05-19%20at%203.05.38%20PM.mp4"
       />
     </div>
   );
