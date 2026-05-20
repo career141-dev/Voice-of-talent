@@ -56,7 +56,7 @@ export default function IntroVideo({ onVideoEnd, onUserUnmute }: IntroVideoProps
         muted
         preload="auto"
         className="w-full h-full object-cover"
-        src="/videos/VOT web upload rec.mp4"
+        src="/videos/vot-intro.mp4"
       />
       {!userInteracted && (
         <div className="absolute inset-0 flex items-center justify-center">
