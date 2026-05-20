@@ -3,47 +3,78 @@
 import { useRef, useEffect, useState } from 'react';
 
 interface IntroVideoProps {
-  onVideoEnd: () => void;
+  onVideoEnd: (wasMuted: boolean) => void;
 }
 
 export default function IntroVideo({ onVideoEnd }: IntroVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [userInteracted, setUserInteracted] = useState(false);
 
   useEffect(() => {
     const videoElement = videoRef.current;
     if (!videoElement) return;
 
     const handleEnded = () => {
-      onVideoEnd();
-    };
-
-    const handleCanPlay = () => {
-      setIsLoading(false);
+      onVideoEnd(true);
     };
 
     videoElement.addEventListener('ended', handleEnded);
-    videoElement.addEventListener('canplay', handleCanPlay);
+
     return () => {
       videoElement.removeEventListener('ended', handleEnded);
-      videoElement.removeEventListener('canplay', handleCanPlay);
     };
   }, [onVideoEnd]);
 
+  // Unmute on first user interaction
+  useEffect(() => {
+    const handleUserInteraction = () => {
+      if (videoRef.current && !userInteracted) {
+        videoRef.current.muted = false;
+        setUserInteracted(true);
+      }
+    };
+
+    const events = ['click', 'touchstart', 'keydown'];
+    events.forEach((event) => {
+      document.addEventListener(event, handleUserInteraction, { once: true });
+    });
+
+    return () => {
+      events.forEach((event) => {
+        document.removeEventListener(event, handleUserInteraction);
+      });
+    };
+  }, [userInteracted]);
+
   return (
     <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black">
-      {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center z-50">
-          <div className="w-12 h-12 border-4 border-gray-400 border-t-white rounded-full animate-spin"></div>
-        </div>
-      )}
       <video
         ref={videoRef}
         autoPlay
         playsInline
+        muted
+        preload="auto"
         className="w-full h-full object-cover"
-        src="https://media.career141.com/WhatsApp%20Video%202026-05-19%20at%203.05.38%20PM.mp4"
+        src="/videos/VOT web upload rec.mp4"
       />
+      {!userInteracted && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-white text-sm mb-4">Click anywhere to unmute</p>
+            <button
+              onClick={() => {
+                if (videoRef.current) {
+                  videoRef.current.muted = false;
+                  setUserInteracted(true);
+                }
+              }}
+              className="px-6 py-2 bg-white/20 hover:bg-white/40 text-white rounded-full backdrop-blur-sm transition"
+            >
+              🔊 Unmute
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

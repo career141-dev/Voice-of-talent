@@ -4,14 +4,14 @@ import { useRef, useEffect, useCallback } from 'react';
 import gsap from 'gsap';
 
 interface UseIntroAnimationProps {
-  onIntroComplete: () => void;
+  onIntroComplete: (wasMuted: boolean) => void;
 }
 
 export function useIntroAnimation({ onIntroComplete }: UseIntroAnimationProps) {
   const introRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const handleVideoEnd = useCallback(() => {
+  const handleVideoEnd = useCallback((wasMuted: boolean) => {
     if (!introRef.current || !contentRef.current) return;
 
     // Create a timeline for synchronized animations
@@ -22,7 +22,7 @@ export function useIntroAnimation({ onIntroComplete }: UseIntroAnimationProps) {
           introRef.current.style.pointerEvents = 'none';
           introRef.current.style.zIndex = '-1';
         }
-        onIntroComplete();
+        onIntroComplete(wasMuted);
       },
     });
 
