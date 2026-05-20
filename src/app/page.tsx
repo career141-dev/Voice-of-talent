@@ -36,10 +36,7 @@ export default function Home() {
     videoElement.currentTime = 0;
     videoElement.muted = !audioUnlocked;
     setIsUnmuted(!videoElement.muted);
-
-    videoElement.play().catch((error) => {
-      console.log('Background video play error:', error);
-    });
+    // Removed automatic play() call to wait for user to click play button
   }, [audioUnlocked, introComplete]);
 
   const togglePlayPause = () => {
@@ -71,23 +68,12 @@ export default function Home() {
           <video
             ref={videoRef}
             className="h-full w-full cursor-pointer object-cover"
-            autoPlay
             muted={!audioUnlocked}
             loop
             playsInline
             preload="auto"
             src={BACKGROUND_VIDEO_URL}
             onClick={togglePlayPause}
-            onLoadedData={() => {
-              videoRef.current?.play().catch((error) => {
-                console.log('Background video loadedData error:', error);
-              });
-            }}
-            onCanPlay={() => {
-              videoRef.current?.play().catch((error) => {
-                console.log('Background video canPlay error:', error);
-              });
-            }}
             onPlay={() => setVideoPlaying(true)}
             onPause={() => setVideoPlaying(false)}
             onError={(event) => {
@@ -95,14 +81,31 @@ export default function Home() {
             }}
           />
 
-          {!videoPlaying && (
-          <div className="pointer-events-none fixed inset-0 z-30 flex items-center justify-center bg-black/30">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/30">
-              <svg className="ml-1 h-10 w-10 text-white" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
-              </svg>
+          {( !videoPlaying || !audioUnlocked ) && (
+            <div 
+              onClick={() => {
+                if (videoRef.current) {
+                  videoRef.current.muted = false;
+                  setAudioUnlocked(true);
+                  setIsUnmuted(true);
+                  videoRef.current.play().catch(e => console.error(e));
+                }
+              }}
+              className="fixed inset-0 z-30 flex items-center justify-center bg-black/20 cursor-pointer group"
+            >
+              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white/10 backdrop-blur-md border border-white/30 group-hover:scale-110 group-hover:bg-white/20 transition-all duration-300">
+                <svg 
+                  className="ml-1.5 h-12 w-12 text-white" 
+                  fill="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </div>
+              <p className="absolute bottom-[40%] text-white text-sm font-medium tracking-[0.3em] uppercase opacity-70 group-hover:opacity-100 transition-opacity">
+                {!audioUnlocked ? "Play" : "Resume"}
+              </p>
             </div>
-          </div>
           )}
 
           <button
