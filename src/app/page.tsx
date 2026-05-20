@@ -1,9 +1,14 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useState, useEffect, useRef } from 'react';
 import IntroVideo from '@/components/IntroVideo';
-import MainContent from '@/components/MainContent';
 import { useIntroAnimation } from '@/hooks/useIntroAnimation';
+
+// Lazy load MainContent as it's not needed during intro
+const MainContent = dynamic(() => import('@/components/MainContent'), {
+  ssr: false,
+});
 
 const BACKGROUND_VIDEO_URL =
   'https://media.career141.com/YTDown_YouTube_Voices-of-Talent-Acquisition-Speaker-Bri_Media_P-jQdxD_D2U_001_1080p.mp4';
@@ -61,7 +66,7 @@ export default function Home() {
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black">
       {introComplete && (
-        <div className="fixed inset-0 z-40 h-[100dvh] w-screen overflow-hidden bg-black flex items-center justify-center">
+        <div className="fixed inset-0 z-40 h-screen w-screen overflow-hidden bg-black">
           <video
             ref={videoRef}
             className="h-full w-full cursor-pointer object-contain md:object-cover"
@@ -72,10 +77,6 @@ export default function Home() {
             src={BACKGROUND_VIDEO_URL}
             onClick={togglePlayPause}
             onLoadStart={() => console.log("Background video started loading...")}
-            onLoadedMetadata={(e) => {
-              // Set a low initial buffer size if supported by browser
-              (e.target as HTMLVideoElement).preload = "metadata";
-            }}
             onPlay={() => setVideoPlaying(true)}
             onPause={() => setVideoPlaying(false)}
             onError={(event) => {

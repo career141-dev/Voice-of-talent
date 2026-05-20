@@ -64,14 +64,14 @@ export default function IntroVideo({ onVideoEnd, onUserUnmute }: IntroVideoProps
   }, [onUserUnmute]);
 
   return (
-    <div className="fixed inset-0 h-[100dvh] w-screen overflow-hidden bg-black flex items-center justify-center">
+    <div className="fixed inset-0 h-screen w-screen overflow-hidden bg-black">
       <video
         ref={videoRef}
         autoPlay
         playsInline
         muted={!userInteracted}
         preload="metadata"
-        className="h-full w-full object-contain md:object-cover"
+        className="h-full w-full object-cover"
         src={INTRO_VIDEO_URL}
         onLoadedData={() => {
           if (videoRef.current && userInteracted) {
