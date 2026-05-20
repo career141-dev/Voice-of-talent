@@ -8,33 +8,25 @@ interface YouTubeBackgroundProps {
 
 declare global {
   interface Window {
-    YT: any;
-    onYouTubeIframeAPIReady: () => void;
+    // YT: any;
   }
 }
 
 export default function YouTubeBackground({ videoId }: YouTubeBackgroundProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
-  const hasUnmuted = useRef(false);
 
   useEffect(() => {
-    // Load YouTube API
-    if (!window.YT) {
-      const tag = document.createElement('script');
-      tag.src = 'https://www.youtube.com/iframe_api';
-      document.head.appendChild(tag);
-    }
-
-    window.onYouTubeIframeAPIReady = () => {
-      if (containerRef.current && !playerRef.current) {
+    // Set up callback BEFORE loading API
+    const initPlayer = () => {
+      if (containerRef.current && !playerRef.current && window.YT && window.YT.Player) {
         playerRef.current = new window.YT.Player(containerRef.current, {
           width: '100%',
           height: '100%',
           videoId: videoId,
           playerVars: {
             autoplay: 1,
-            mute: 1,
+            mute: 0,
             controls: 0,
             modestbranding: 1,
             rel: 0,
@@ -47,16 +39,9 @@ export default function YouTubeBackground({ videoId }: YouTubeBackgroundProps) {
           events: {
             onReady: (event: any) => {
               event.target.playVideo();
-              // Unmute after 2 seconds
-              setTimeout(() => {
-                if (!hasUnmuted.current) {
-                  event.target.unMute();
-                  hasUnmuted.current = true;
-                }
-              }, 2000);
+              event.target.setVolume(100);
             },
             onStateChange: (event: any) => {
-              // Keep video playing
               if (event.data === window.YT.PlayerState.ENDED) {
                 event.target.playVideo();
               }
@@ -66,14 +51,27 @@ export default function YouTubeBackground({ videoId }: YouTubeBackgroundProps) {
       }
     };
 
-    // Trigger API ready if already loaded
-    if (window.YT && window.YT.Player) {
-      window.onYouTubeIframeAPIReady();
+    // Set the callback globally
+    window.onYouTubeIframeAPIReady = initPlayer;
+
+    // Load API if not already loaded
+    if (!window.YT) {
+      const tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      tag.async = true;
+      document.head.appendChild(tag);
+    } else if (window.YT && window.YT.Player) {
+      // API already loaded, init immediately
+      initPlayer();
     }
 
     return () => {
       if (playerRef.current) {
-        playerRef.current.destroy();
+        try {
+          playerRef.current.destroy();
+        } catch (e) {
+          console.log('Error destroying player:', e);
+        }
         playerRef.current = null;
       }
     };
@@ -83,6 +81,7 @@ export default function YouTubeBackground({ videoId }: YouTubeBackgroundProps) {
     if (playerRef.current) {
       if (playerRef.current.isMuted()) {
         playerRef.current.unMute();
+        playerRef.current.setVolume(100);
       } else {
         playerRef.current.mute();
       }

@@ -4,9 +4,10 @@ import { useRef, useEffect, useState } from 'react';
 
 interface IntroVideoProps {
   onVideoEnd: (wasMuted: boolean) => void;
+  onUserUnmute?: () => void;
 }
 
-export default function IntroVideo({ onVideoEnd }: IntroVideoProps) {
+export default function IntroVideo({ onVideoEnd, onUserUnmute }: IntroVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [userInteracted, setUserInteracted] = useState(false);
 
@@ -66,6 +67,7 @@ export default function IntroVideo({ onVideoEnd }: IntroVideoProps) {
                 if (videoRef.current) {
                   videoRef.current.muted = false;
                   setUserInteracted(true);
+                  onUserUnmute?.();
                 }
               }}
               className="px-6 py-2 bg-white/20 hover:bg-white/40 text-white rounded-full backdrop-blur-sm transition"

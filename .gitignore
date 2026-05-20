@@ -1,1 +1,5 @@
 ﻿public/videos/*.mp4
+node_modules
+
+.next
+.turbo
