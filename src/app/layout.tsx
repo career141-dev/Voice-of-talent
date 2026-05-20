@@ -33,6 +33,10 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} antialiased w-screen h-screen overflow-hidden`}
     >
+      <head>
+        <link rel="preconnect" href="https://media.career141.com" />
+        <link rel="dns-prefetch" href="https://media.career141.com" />
+      </head>
       <body suppressHydrationWarning className="w-screen h-screen overflow-hidden m-0 p-0">
         {children}
       </body>

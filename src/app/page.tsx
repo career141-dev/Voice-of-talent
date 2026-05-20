@@ -71,6 +71,11 @@ export default function Home() {
             preload="auto"
             src={BACKGROUND_VIDEO_URL}
             onClick={togglePlayPause}
+            onLoadStart={() => console.log("Background video started loading...")}
+            onLoadedMetadata={(e) => {
+              // Set a low initial buffer size if supported by browser
+              (e.target as HTMLVideoElement).preload = "metadata";
+            }}
             onPlay={() => setVideoPlaying(true)}
             onPause={() => setVideoPlaying(false)}
             onError={(event) => {
