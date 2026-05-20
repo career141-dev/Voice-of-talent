@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useCallback } from 'react';
 import gsap from 'gsap';
 
 interface UseIntroAnimationProps {
@@ -12,38 +12,23 @@ export function useIntroAnimation({ onIntroComplete }: UseIntroAnimationProps) {
   const contentRef = useRef<HTMLDivElement>(null);
 
   const handleVideoEnd = useCallback((wasMuted: boolean) => {
-    if (!introRef.current || !contentRef.current) return;
+    if (!introRef.current) return;
 
-    // Create a timeline for synchronized animations
     const tl = gsap.timeline({
       onComplete: () => {
-        // Hide intro after animation completes
         if (introRef.current) {
           introRef.current.style.pointerEvents = 'none';
-          introRef.current.style.zIndex = '-1';
+          introRef.current.style.visibility = 'hidden';
         }
         onIntroComplete(wasMuted);
       },
     });
 
-    // Fade out intro video and fade in main content simultaneously
-    tl.to(
-      introRef.current,
-      {
-        opacity: 0,
-        duration: 1.5,
-        ease: 'power2.inOut',
-      },
-      0 // Start at time 0
-    ).to(
-      contentRef.current,
-      {
-        opacity: 1,
-        duration: 1.5,
-        ease: 'power2.inOut',
-      },
-      0 // Start at same time for parallel animation
-    );
+    tl.to(introRef.current, {
+      opacity: 0,
+      duration: 0.45,
+      ease: 'power2.inOut',
+    });
   }, [onIntroComplete]);
 
   return {

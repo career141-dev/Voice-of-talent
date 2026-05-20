@@ -1,22 +1,33 @@
 'use client';
 
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 
 interface IntroVideoProps {
   onVideoEnd: (wasMuted: boolean) => void;
   onUserUnmute?: () => void;
 }
 
+const INTRO_VIDEO_URL =
+  'https://media.career141.com/WhatsApp%20Video%202026-05-19%20at%203.05.38%20PM.mp4';
+
 export default function IntroVideo({ onVideoEnd, onUserUnmute }: IntroVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const hasCompletedRef = useRef(false);
   const [userInteracted, setUserInteracted] = useState(false);
+
+  const completeIntro = useCallback(() => {
+    if (hasCompletedRef.current) return;
+
+    hasCompletedRef.current = true;
+    onVideoEnd(videoRef.current?.muted ?? true);
+  }, [onVideoEnd]);
 
   useEffect(() => {
     const videoElement = videoRef.current;
     if (!videoElement) return;
 
     const handleEnded = () => {
-      onVideoEnd(true);
+      completeIntro();
     };
 
     videoElement.addEventListener('ended', handleEnded);
@@ -24,15 +35,20 @@ export default function IntroVideo({ onVideoEnd, onUserUnmute }: IntroVideoProps
     return () => {
       videoElement.removeEventListener('ended', handleEnded);
     };
-  }, [onVideoEnd]);
+  }, [completeIntro]);
 
-  // Unmute on first user interaction
   useEffect(() => {
     const handleUserInteraction = () => {
-      if (videoRef.current && !userInteracted) {
-        videoRef.current.muted = false;
-        setUserInteracted(true);
+      const videoElement = videoRef.current;
+
+      setUserInteracted(true);
+
+      if (videoElement) {
+        videoElement.muted = false;
+        videoElement.play().catch(() => {});
       }
+
+      onUserUnmute?.();
     };
 
     const events = ['click', 'touchstart', 'keydown'];
@@ -45,38 +61,28 @@ export default function IntroVideo({ onVideoEnd, onUserUnmute }: IntroVideoProps
         document.removeEventListener(event, handleUserInteraction);
       });
     };
-  }, [userInteracted]);
+  }, [onUserUnmute]);
 
   return (
-    <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black">
+    <div className="fixed inset-0 h-screen w-screen overflow-hidden bg-black">
       <video
         ref={videoRef}
         autoPlay
         playsInline
-        muted
-        preload="auto"
-        className="w-full h-full object-cover"
-        src="/videos/vot-intro.mp4"
+        muted={!userInteracted}
+        preload="metadata"
+        className="h-full w-full object-cover"
+        src={INTRO_VIDEO_URL}
+        onLoadedData={() => {
+          if (videoRef.current && userInteracted) {
+            videoRef.current.muted = false;
+            videoRef.current.play().catch(() => {});
+          }
+        }}
+        onError={() => {
+          completeIntro();
+        }}
       />
-      {!userInteracted && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-white text-sm mb-4">Click anywhere to unmute</p>
-            <button
-              onClick={() => {
-                if (videoRef.current) {
-                  videoRef.current.muted = false;
-                  setUserInteracted(true);
-                  onUserUnmute?.();
-                }
-              }}
-              className="px-6 py-2 bg-white/20 hover:bg-white/40 text-white rounded-full backdrop-blur-sm transition"
-            >
-              🔊 Unmute
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
