@@ -8,14 +8,19 @@ import { useIntroAnimation } from '@/hooks/useIntroAnimation';
 declare global {
   interface Window {
     // YT: any;
+    onYouTubeIframeAPIReady?: () => void;
   }
 }
 
+let youtubeApiLoaded = false;
+let playerInitQueue: (() => void)[] = [];
+
 export default function Home() {
   const [introComplete, setIntroComplete] = useState(false);
-  const [userHasUnmuted, setUserHasUnmuted] = useState(false);
+  const [userHasInteracted, setUserHasInteracted] = useState(false);
   const playerRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const playerReadyRef = useRef(false);
 
   const { introRef, contentRef, handleVideoEnd } = useIntroAnimation({
     onIntroComplete: () => {
@@ -23,62 +28,113 @@ export default function Home() {
     },
   });
 
+  // Load YouTube API once on mount
   useEffect(() => {
-    if (introComplete) {
-      // Set up callback BEFORE loading API
-      const initPlayer = () => {
-        if (containerRef.current && !playerRef.current && window.YT && window.YT.Player) {
-          playerRef.current = new window.YT.Player(containerRef.current, {
-            width: '100%',
-            height: '100%',
-            videoId: 'P-jQdxD_D2U',
-            playerVars: {
-              autoplay: 1,
-              mute: 0, // Start unmuted if user already unmuted intro
-              controls: 0,
-              modestbranding: 1,
-              rel: 0,
-              loop: 1,
-              playlist: 'P-jQdxD_D2U',
-              fs: 0,
-              iv_load_policy: 3,
-              playsinline: 1,
-            },
-            events: {
-              onReady: (event: any) => {
-                // Force play
-                event.target.playVideo();
-                event.target.setVolume(100);
-              },
-              onStateChange: (event: any) => {
-                // Keep looping
-                if (event.data === window.YT.PlayerState.ENDED) {
-                  event.target.playVideo();
-                }
-              },
-              onError: (event: any) => {
-                console.error('YouTube error:', event.data);
-              }
-            },
-          });
-        }
+    if (youtubeApiLoaded) return;
+
+    const globalCallback = () => {
+      youtubeApiLoaded = true;
+      // Process any queued initializations
+      playerInitQueue.forEach(fn => fn());
+      playerInitQueue = [];
+    };
+
+    window.onYouTubeIframeAPIReady = globalCallback;
+
+    // Check if API is already loaded
+    if (window.YT && window.YT.Player) {
+      youtubeApiLoaded = true;
+    } else {
+      // Load the API script
+      const script = document.createElement('script');
+      script.src = 'https://www.youtube.com/iframe_api';
+      script.async = true;
+      script.onerror = () => {
+        console.error('Failed to load YouTube API');
       };
-
-      // Set the callback globally
-      window.onYouTubeIframeAPIReady = initPlayer;
-
-      // Load API if not already loaded
-      if (!window.YT) {
-        const tag = document.createElement('script');
-        tag.src = 'https://www.youtube.com/iframe_api';
-        tag.async = true;
-        document.head.appendChild(tag);
-      } else if (window.YT && window.YT.Player) {
-        // API already loaded, init immediately
-        initPlayer();
-      }
+      document.head.appendChild(script);
     }
+  }, []);
 
+  // Initialize player when intro completes
+  useEffect(() => {
+    if (introComplete && window.YT && window.YT.Player && containerRef.current && !playerRef.current) {
+      playerRef.current = new window.YT.Player(containerRef.current, {
+        width: '100%',
+        height: '100%',
+        videoId: 'P-jQdxD_D2U',
+        playerVars: {
+          autoplay: 1,
+          mute: 1, // Start MUTED for autoplay to work on refresh
+          controls: 0,
+          modestbranding: 1,
+          rel: 0,
+          loop: 1,
+          playlist: 'P-jQdxD_D2U',
+          fs: 0,
+          iv_load_policy: 3,
+          playsinline: 1,
+        },
+        events: {
+          onReady: (event: any) => {
+            playerReadyRef.current = true;
+            event.target.playVideo();
+            // Try to unmute if user has already interacted
+            if (userHasInteracted) {
+              try {
+                event.target.unMute();
+                event.target.setVolume(100);
+              } catch (e) {
+                console.log('Cannot unmute yet - waiting for user interaction');
+              }
+            }
+          },
+          onStateChange: (event: any) => {
+            if (event.data === window.YT.PlayerState.ENDED) {
+              event.target.playVideo();
+            }
+          },
+          onError: (event: any) => {
+            console.error('YouTube error:', event.data);
+          }
+        },
+      });
+    }
+  }, [introComplete, userHasInteracted]);
+
+  // Handle user interaction to unmute video
+  useEffect(() => {
+    const handleUserInteraction = () => {
+      if (!userHasInteracted) {
+        setUserHasInteracted(true);
+        // Unmute player if ready
+        if (playerRef.current && playerReadyRef.current) {
+          try {
+            playerRef.current.unMute();
+            playerRef.current.setVolume(100);
+          } catch (e) {
+            console.log('Error unmuting:', e);
+          }
+        }
+        // Remove listener after first interaction
+        document.removeEventListener('click', handleUserInteraction);
+        document.removeEventListener('touchstart', handleUserInteraction);
+        document.removeEventListener('keydown', handleUserInteraction);
+      }
+    };
+
+    document.addEventListener('click', handleUserInteraction);
+    document.addEventListener('touchstart', handleUserInteraction);
+    document.addEventListener('keydown', handleUserInteraction);
+
+    return () => {
+      document.removeEventListener('click', handleUserInteraction);
+      document.removeEventListener('touchstart', handleUserInteraction);
+      document.removeEventListener('keydown', handleUserInteraction);
+    };
+  }, [userHasInteracted]);
+
+  useEffect(() => {
     return () => {
       if (playerRef.current) {
         try {
@@ -89,7 +145,7 @@ export default function Home() {
         playerRef.current = null;
       }
     };
-  }, [introComplete, userHasUnmuted]);
+  }, []);
 
   return (
     <div className="w-screen h-screen overflow-hidden relative bg-black">
@@ -100,7 +156,6 @@ export default function Home() {
       >
         <IntroVideo 
           onVideoEnd={handleVideoEnd}
-          onUserUnmute={() => setUserHasUnmuted(true)}
         />
       </div>
 
