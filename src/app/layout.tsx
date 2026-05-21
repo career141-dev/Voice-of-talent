@@ -36,7 +36,20 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://media.career141.com" />
         <link rel="dns-prefetch" href="https://media.career141.com" />
-        <link rel="preload" href="https://media.career141.com/WhatsApp%20Video%202026-05-19%20at%203.05.38%20PM.mp4" as="video" type="video/mp4" />
+        <link
+          rel="preload"
+          href="https://media.career141.com/mobile.mp4"
+          as="video"
+          type="video/mp4"
+          media="(max-width: 767px)"
+        />
+        <link
+          rel="preload"
+          href="https://media.career141.com/career141-intro.mp4.mp4"
+          as="video"
+          type="video/mp4"
+          media="(min-width: 768px)"
+        />
       </head>
       <body suppressHydrationWarning className="w-screen h-screen overflow-hidden m-0 p-0">
         {children}
