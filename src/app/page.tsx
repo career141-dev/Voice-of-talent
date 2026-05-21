@@ -11,7 +11,7 @@ const MainContent = dynamic(() => import('@/components/MainContent'), {
 });
 
 const BACKGROUND_VIDEO_URL =
-  'https://media.career141.com/YTDown_YouTube_Voices-of-Talent-Acquisition-Speaker-Bri_Media_P-jQdxD_D2U_001_1080p.mp4';
+  'https://media.career141.com/Ytdown%20Youtube%20Voices-Of-Talent-Acquisition.mp4';
 
 export default function Home() {
   const [introComplete, setIntroComplete] = useState(false);

@@ -8,7 +8,8 @@ interface IntroVideoProps {
 }
 
 const INTRO_VIDEO_URL =
-  'https://media.career141.com/WhatsApp%20Video%202026-05-19%20at%203.05.38%20PM.mp4';
+  'https://media.career141.com/career141-intro.mp4.mp4';
+const MOBILE_INTRO_VIDEO_URL = 'https://media.career141.com/mobile.mp4';
 
 export default function IntroVideo({ onVideoEnd, onUserUnmute }: IntroVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -72,7 +73,6 @@ export default function IntroVideo({ onVideoEnd, onUserUnmute }: IntroVideoProps
         muted={!userInteracted}
         preload="metadata"
         className="h-full w-full object-cover"
-        src={INTRO_VIDEO_URL}
         onLoadedData={() => {
           if (videoRef.current && userInteracted) {
             videoRef.current.muted = false;
@@ -82,7 +82,10 @@ export default function IntroVideo({ onVideoEnd, onUserUnmute }: IntroVideoProps
         onError={() => {
           completeIntro();
         }}
-      />
+      >
+        <source src={MOBILE_INTRO_VIDEO_URL} media="(max-width: 767px)" type="video/mp4" />
+        <source src={INTRO_VIDEO_URL} type="video/mp4" />
+      </video>
     </div>
   );
 }
