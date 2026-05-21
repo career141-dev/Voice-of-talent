@@ -10,11 +10,13 @@ interface IntroVideoProps {
 const INTRO_VIDEO_URL =
   'https://media.career141.com/career141-intro.mp4.mp4';
 const MOBILE_INTRO_VIDEO_URL = 'https://media.career141.com/mobile.mp4';
+const MOBILE_INTRO_QUERY = '(max-width: 767px)';
 
 export default function IntroVideo({ onVideoEnd, onUserUnmute }: IntroVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hasCompletedRef = useRef(false);
   const [userInteracted, setUserInteracted] = useState(false);
+  const [introVideoUrl, setIntroVideoUrl] = useState<string | null>(null);
 
   const completeIntro = useCallback(() => {
     if (hasCompletedRef.current) return;
@@ -36,7 +38,30 @@ export default function IntroVideo({ onVideoEnd, onUserUnmute }: IntroVideoProps
     return () => {
       videoElement.removeEventListener('ended', handleEnded);
     };
-  }, [completeIntro]);
+  }, [completeIntro, introVideoUrl]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(MOBILE_INTRO_QUERY);
+
+    const handleMediaChange = (event: MediaQueryListEvent) => {
+      setIntroVideoUrl(event.matches ? MOBILE_INTRO_VIDEO_URL : INTRO_VIDEO_URL);
+    };
+
+    setIntroVideoUrl(mediaQuery.matches ? MOBILE_INTRO_VIDEO_URL : INTRO_VIDEO_URL);
+    mediaQuery.addEventListener('change', handleMediaChange);
+
+    return () => {
+      mediaQuery.removeEventListener('change', handleMediaChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    const videoElement = videoRef.current;
+    if (!videoElement || hasCompletedRef.current) return;
+
+    videoElement.load();
+    videoElement.play().catch(() => {});
+  }, [introVideoUrl]);
 
   useEffect(() => {
     const handleUserInteraction = () => {
@@ -66,26 +91,26 @@ export default function IntroVideo({ onVideoEnd, onUserUnmute }: IntroVideoProps
 
   return (
     <div className="fixed inset-0 h-[100svh] min-h-[100dvh] w-screen overflow-hidden bg-black md:h-screen">
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        muted={!userInteracted}
-        preload="metadata"
-        className="block h-full w-full object-cover object-center"
-        onLoadedData={() => {
-          if (videoRef.current && userInteracted) {
-            videoRef.current.muted = false;
-            videoRef.current.play().catch(() => {});
-          }
-        }}
-        onError={() => {
-          completeIntro();
-        }}
-      >
-        <source src={MOBILE_INTRO_VIDEO_URL} media="(max-width: 767px)" type="video/mp4" />
-        <source src={INTRO_VIDEO_URL} type="video/mp4" />
-      </video>
+      {introVideoUrl && (
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted={!userInteracted}
+          preload="metadata"
+          src={introVideoUrl}
+          className="block h-full w-full object-cover object-center"
+          onLoadedData={() => {
+            if (videoRef.current && userInteracted) {
+              videoRef.current.muted = false;
+              videoRef.current.play().catch(() => {});
+            }
+          }}
+          onError={() => {
+            completeIntro();
+          }}
+        />
+      )}
     </div>
   );
 }
