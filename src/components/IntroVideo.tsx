@@ -9,7 +9,7 @@ interface IntroVideoProps {
 
 const INTRO_VIDEO_URL =
   'https://media.career141.com/career141-intro.mp4.mp4';
-const MOBILE_INTRO_VIDEO_URL = 'https://media.career141.com/Vot%20Web%20Upload%20Recf.mp4';
+const MOBILE_INTRO_VIDEO_URL = 'https://media.career141.com/mobilefilelast.mp4';
 const MOBILE_INTRO_QUERY = '(max-width: 767px)';
 
 export default function IntroVideo({ onVideoEnd, onUserUnmute }: IntroVideoProps) {

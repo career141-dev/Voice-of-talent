@@ -38,7 +38,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://media.career141.com" />
         <link
           rel="preload"
-          href="https://media.career141.com/mobile.mp4"
+          href="https://media.career141.com/mobilefilelast.mp4"
           as="video"
           type="video/mp4"
           media="(max-width: 767px)"
